@@ -1,0 +1,5 @@
+.venv/
+tensorfold/
+weights/
+results/
+__pycache__/
