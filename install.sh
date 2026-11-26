@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ENGINE_REPO="${ENGINE_REPO:-https://github.com/Kristianaaron/TensorFold.git}"
-ENGINE_REF="${ENGINE_REF:-6d4b7682671977178fb367d7ab92061c968e218d}"
+ENGINE_REF="${ENGINE_REF:-c6b6d502f18c9da1ffc335561735231ad0e5cb09}"
 WEIGHTS_REPO="${WEIGHTS_REPO:-Krishando/Nemotron-3.5-Lightning-30B-A3B-EXL3-2.3bpw}"
 WEIGHTS_DIR="${WEIGHTS_DIR:-./weights}"
 CUDA_HOME="${CUDA_HOME:-/usr/local/cuda-13.0}"

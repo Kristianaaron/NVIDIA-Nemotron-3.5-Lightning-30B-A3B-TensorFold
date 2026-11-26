@@ -14,6 +14,12 @@ BIN=./tensorfold/zig-out/native/bin/tensorfold-native
 export TF_NEMOTRON_KV_POOL_TOKENS=65024
 # One CUDA graph per decode window, shared across streams (output unchanged).
 export TF_NEMOTRON_SHARED_GRAPHS=1
+# Batch shared-window host metadata into one upload/download per round (output unchanged).
+export TF_NEMOTRON_SHARED_STAGE=1
+# 4-tile compact-epilogue EXL3 grouped-expert decode kernel (bit-identical output).
+export TF_NEMOTRON_EXL3_NT4=1
+# Optional: set TF_NEMOTRON_PREFILL_STEP=1 to interleave long prefills between decode rounds
+# (cuts median swarm TTFT by ~2.3x, though tail TTFT can rise under a saturated 128k KV pool).
 
 exec "$BIN" serve "$WEIGHTS_DIR" --name nemo --host "$HOST" --port "$PORT" \
   --parallel 16 --context 65536 --mtp-drafts 1

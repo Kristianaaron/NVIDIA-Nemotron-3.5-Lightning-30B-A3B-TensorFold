@@ -9,21 +9,21 @@ native engine, with the model's own MTP head as a drafter.
 
 ## Results
 
-Measured on an RTX 5070 Ti (16 GB), WSL2, 2026-11-23/24. Thinking on.
+Measured on an RTX 5070 Ti (16 GB), WSL2, 2026-11-26 (decode + swarm) and 2026-11-23/24 (single-stream prefill and quality). Thinking on.
 
 ### Speed
 
 | Test | What it measures | Result |
 |---|---|---|
-| 1 stream, T=1 | decode speed of a single chat (256-token replies, short prompt) | **392 tok/s** |
-| 1 stream, greedy | same, temperature 0 | 376 tok/s |
-| 16 streams, T=1, total | decode speed with 16 chats at once, steady state | **1,040 tok/s** (~65 tok/s per stream) |
-| 16 streams, greedy, total | same, temperature 0 | 1,013 tok/s |
-| 16-agent swarm, total | 16 tool-using agents for 10 minutes (4k system prompt, 600-token tasks, 400-token replies, 300-token tool results) | **443 tok/s**, 681 turns, 0 failed |
-| Swarm time to first token | median / 95th percentile | 11.1 s / 14.2 s |
+| 1 stream, T=1 | decode speed of a single chat (256-token replies, short prompt) | **460 tok/s** (up from 392) |
+| 1 stream, greedy | same, temperature 0 | **458 tok/s** (up from 376) |
+| 16 streams, T=1, total | decode speed with 16 chats at once, steady state | **1,215 tok/s** (~76 tok/s per stream; up from 1,040) |
+| 16 streams, greedy, total | same, temperature 0 | **1,229 tok/s** (up from 1,013) |
+| 16-agent swarm, total | 16 tool-using agents (4k system prompt, 600-token tasks, 400-token replies, 300-token tool results) | **540 tok/s**, 0 failed (with `TF_NEMOTRON_PREFILL_STEP=1`) |
+| Swarm time to first token | median (with `TF_NEMOTRON_PREFILL_STEP=1`, vs 6.6 s baseline in the same run) | **2.8 s** median (p95 17.8 s under saturated KV pool) |
 | Prefill, 1 stream | prompt processing; time to first token | 1k: 1,770 tok/s (0.6 s) · 4k: 3,830 tok/s (1.1 s) · 16k: 4,010 tok/s (4.1 s) · 32k: 4,055 tok/s (7.9 s) |
 
-Drafting with the MTP head does not change output: greedy and seeded T=1 outputs are bit-identical with drafts on and off.
+Drafting with the MTP head and the decode switches (`TF_NEMOTRON_SHARED_GRAPHS`, `TF_NEMOTRON_SHARED_STAGE`, `TF_NEMOTRON_EXL3_NT4`, `TF_NEMOTRON_PREFILL_STEP`) do not change output: greedy and seeded T=1 outputs are bit-identical across 16 concurrent streams.
 
 ### Quality vs the BF16 original
 
@@ -62,6 +62,7 @@ Requirements: an NVIDIA GPU with 16 GB of VRAM (tested: RTX 5070 Ti), CUDA 13, L
 
 ```bash
 TF_NEMOTRON_KV_POOL_TOKENS=65024 TF_NEMOTRON_SHARED_GRAPHS=1 \
+  TF_NEMOTRON_SHARED_STAGE=1 TF_NEMOTRON_EXL3_NT4=1 \
   ./tensorfold/zig-out/native/bin/tensorfold-native serve ./weights --name nemo --port 8090 \
   --parallel 16 --context 65536 --mtp-drafts 1
 ```
@@ -86,8 +87,7 @@ figures above. On an RTX 5070 Ti expect about 340 tok/s per request at 1 stream 
 
 ## Known issues
 
-- Long prompts stall other streams while they are processed (no chunked prefill yet); this is the main reason the
-  swarm total is below the clean 16-stream number.
+- Chunked prefill is available opt-in via `TF_NEMOTRON_PREFILL_STEP=1` (cuts median swarm TTFT by ~2.3x, though tail TTFT can rise when the shared 128k KV pool is saturated); without it, long prompts run to completion before resuming decode.
 - No VRAM is left for other GPU work while the server runs.
 
 ## Credits
